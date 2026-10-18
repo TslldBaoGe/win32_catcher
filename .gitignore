@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+data/captures.json
+data/thumbs/
+data/logs/
+data/icon.png
+*.log
+@AutomationLog.txt
+data/settings.json
+data/custom_code.py
+build/
+dist/
+*.spec
+data/python_path.txt
