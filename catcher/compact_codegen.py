@@ -104,7 +104,10 @@ def generate_uiautomation_compact(capture: ElementCapture) -> str:
         body = "    return win\n"
     else:
         prop_args = ", ".join(f"{k}={_q(v)}" for k, v in target_props.items())
-        body = f"    return win.{type_name}(searchDepth={search_depth}{', ' + prop_args if prop_args else ''})\n"
+        body = (
+            f"    target = win.{type_name}(searchDepth={search_depth}{', ' + prop_args if prop_args else ''})\n"
+            f"    return target\n"
+        )
 
     return (
         f"# 极简定位 · {capture.control_type_name} {capture.name!r} · 窗口 {capture.window_title!r}\n"
@@ -147,7 +150,10 @@ def generate_pywinauto_compact(capture: ElementCapture) -> str:
         body = "    return win\n"
     else:
         target_args = ", ".join(f"{k}={v}" for k, v in target_props.items())
-        body = f"    return win.child_window({target_args})\n"
+        body = (
+            f"    target = win.child_window({target_args})\n"
+            f"    return target\n"
+        )
 
     return (
         f"# 极简定位 · {capture.control_type_name} {capture.name!r} · 窗口 {capture.window_title!r}\n"
