@@ -87,18 +87,20 @@ def generate_uiautomation_compact(capture: ElementCapture) -> str:
         )
     top = capture.steps[0]
     type_name, target_props = _uia_target(capture)
-    search_depth = max(4, min(12, len(capture.steps) + 2))
+    search_depth = max(4, min(24, len(capture.steps) + 2))
 
+    is_window = top.control_type_name == "WindowControl"
     win_args: List[str] = []
     if top.name:
         win_args.append(f"Name={_q(top.name)}")
     if top.class_name:
         win_args.append(f"ClassName={_q(top.class_name)}")
-    if top.control_type_name != "WindowControl":
+    if not is_window:
         win_args.append(f"ControlType=auto.ControlType.{top.control_type_name}")
     if top.found_index > 1:
         win_args.append(f"foundIndex={top.found_index}")
-    win_call = f"auto.WindowControl(searchDepth=1{', ' + ', '.join(win_args) if win_args else ''})"
+    factory = "auto.WindowControl" if is_window else "auto.Control"
+    win_call = f"{factory}(searchDepth=1{', ' + ', '.join(win_args) if win_args else ''})"
 
     if len(capture.steps) == 1:
         body = "    return win\n"

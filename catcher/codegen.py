@@ -186,6 +186,7 @@ def _pwa_child_args(step: SelectorStep) -> List[Tuple[str, str]]:
     ctype = _pywinauto_control_type(step)
     if ctype:
         args.append(("control_type", _q(ctype)))
+    args.append(("depth", "1"))
     args.append(("found_index", str(max(0, step.found_index - 1))))
     return args
 
@@ -227,12 +228,16 @@ def generate_pywinauto(capture: ElementCapture) -> str:
         lines.append("    ctrl = win")
         lines.append("")
 
-        for index, step in enumerate(capture.steps[1:], start=2):
-            lines.append(f"    # [{index}/{total}] {_step_title(step)}")
-            lines.extend(_call_block("ctrl = ctrl.child_window", _pwa_child_args(step), 4))
-            lines.append("    ctrl.wait('exists', timeout=timeout)")
-            lines.append("")
-        lines.append("    return ctrl")
+        anchor_lines = _anchor_locator_lines(capture)
+        if anchor_lines:
+            lines.extend(anchor_lines)
+        else:
+            for index, step in enumerate(capture.steps[1:], start=2):
+                lines.append(f"    # [{index}/{total}] {_step_title(step)}")
+                lines.extend(_call_block("ctrl = ctrl.child_window", _pwa_child_args(step), 4))
+                lines.append("    ctrl.wait('exists', timeout=timeout)")
+                lines.append("")
+            lines.append("    return ctrl")
 
     lines.append("")
     lines.append("")
@@ -463,4 +468,7 @@ from .compact_codegen import (  # noqa: E402,F401
     generate_pywinauto_compact,
     generate_uiautomation_compact,
 )
-from .rel_codegen import generate_pywinauto_relative  # noqa: E402,F401
+from .rel_codegen import (  # noqa: E402,F401
+    _anchor_locator_lines,
+    generate_pywinauto_relative,
+)

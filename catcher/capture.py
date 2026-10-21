@@ -420,6 +420,11 @@ def build_steps(ctrl: Any) -> List[SelectorStep]:
 
         target_snap = _snapshot(item, is_top=is_top)
         sibling_snaps = [_snapshot(s, is_top=is_top) for s in siblings_raw]
+        child_index = 0
+        for pos, snap in enumerate(sibling_snaps, start=1):
+            if snap.rid == target_snap.rid:
+                child_index = pos
+                break
         if not any(s.rid == target_snap.rid for s in sibling_snaps):
             sibling_snaps.append(target_snap)
         if not sibling_snaps:
@@ -437,6 +442,7 @@ def build_steps(ctrl: Any) -> List[SelectorStep]:
                 class_name=target_snap.class_name,
                 found_index=found_index,
                 match_count=match_count,
+                child_index=child_index,
                 is_top_level=is_top,
                 window_text=window_text,
                 fallback=fallback,
@@ -542,7 +548,7 @@ _LEAF_STOP_TYPES = {
     "ButtonControl", "MenuItemControl", "ListItemControl", "TabItemControl",
     "TreeItemControl", "CheckBoxControl", "RadioButtonControl", "HyperlinkControl",
     "ComboBoxControl", "SliderControl", "SpinnerControl", "SplitButtonControl",
-    "EditControl", "DocumentControl", "DataItemControl", "ImageControl",
+    "EditControl", "DataItemControl", "ImageControl",
 }
 
 
@@ -738,6 +744,7 @@ def capture_from_control(ctrl: Any, x: int, y: int, thumb_dir: Path, mode: str =
         steps=steps,
         rel_texts=rel_texts,
         rel_index=rel_index,
+        rel_types=rel_types,
         capture_mode=("pwa树状" if mode == "tree" else "uia坐标"),
     )
 

@@ -71,6 +71,7 @@ class SelectorStep:
     class_name: str = ""
     found_index: int = 1
     match_count: int = 1
+    child_index: int = 0
     is_top_level: bool = False
     window_text: str = ""
     fallback: Optional[Dict[str, Any]] = None
@@ -112,6 +113,7 @@ class ElementCapture:
     runtime_id: List[int] = field(default_factory=list)
     rel_texts: List[str] = field(default_factory=list)
     rel_index: int = 0
+    rel_types: List[str] = field(default_factory=list)
     is_enabled: bool = True
     is_offscreen: bool = False
     is_password: bool = False
@@ -193,6 +195,8 @@ class ElementCapture:
             data["runtime_id"] = []
         if not isinstance(data.get("rel_texts"), list):
             data["rel_texts"] = []
+        if not isinstance(data.get("rel_types"), list):
+            data["rel_types"] = []
         try:
             data["rel_index"] = int(data.get("rel_index") or 0)
         except Exception:
