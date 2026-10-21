@@ -20,6 +20,7 @@ from .codegen import (
     generate_uiautomation,
     generate_uiautomation_compact,
 )
+from .rel_codegen import generate_pywinauto_relative
 from .models import ElementCapture, SelectorStep, control_type_label, short_type
 from .winutil import (
     get_window_text,
@@ -561,6 +562,20 @@ def capture_from_control(ctrl: Any, x: int, y: int, thumb_dir: Path) -> ElementC
     except Exception as exc:
         raise _friendly_error(exc) from exc
 
+    rel_texts: List[str] = []
+    rel_types: List[str] = []
+    rel_index = 0
+    try:
+        parent_ctrl = ctrl.GetParentControl()
+        if parent_ctrl is not None:
+            for i, sib in enumerate(parent_ctrl.GetChildren(), start=1):
+                rel_types.append(str(_safe(lambda: sib.ControlTypeName, "") or ""))
+                rel_texts.append(str(_safe(lambda: sib.Name, "") or ""))
+                if _rid(sib) == _rid(ctrl):
+                    rel_index = i
+    except Exception:
+        pass
+
     rect = _rect_tuple(ctrl)
     type_name = str(_safe(lambda: ctrl.ControlTypeName, "") or "")
     localized = str(_safe(lambda: ctrl.LocalizedControlType, "") or "")
@@ -604,6 +619,8 @@ def capture_from_control(ctrl: Any, x: int, y: int, thumb_dir: Path) -> ElementC
         item_type=str(_safe(lambda: ctrl.ItemType, "") or ""),
         value_preview=_read_value_preview(ctrl),
         steps=steps,
+        rel_texts=rel_texts,
+        rel_index=rel_index,
     )
 
     # 等覆盖层隐藏后再截图，避免把高亮边框截进缩略图。
@@ -616,4 +633,5 @@ def capture_from_control(ctrl: Any, x: int, y: int, thumb_dir: Path) -> ElementC
     capture.pywinauto_code = generate_pywinauto(capture)
     capture.uia_compact_code = generate_uiautomation_compact(capture)
     capture.pywinauto_compact_code = generate_pywinauto_compact(capture)
+    capture.pwa_rel_code = generate_pywinauto_relative(capture)
     return capture

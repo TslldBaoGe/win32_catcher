@@ -104,12 +104,13 @@ def _rect_check(data: Dict[str, Any]) -> CheckResult:
 
 def run_verification(capture: ElementCapture, mode: str, python_exe: str = "") -> VerifyResult:
     start = time.perf_counter()
-    mode = mode if mode in ("uiautomation", "pywinauto", "uiautomation_compact", "pywinauto_compact") else "uiautomation"
+    mode = mode if mode in ("uiautomation", "pywinauto", "uiautomation_compact", "pywinauto_compact", "pywinauto_relative") else "uiautomation"
     code = {
         "uiautomation": capture.uia_code,
         "pywinauto": capture.pywinauto_code,
         "uiautomation_compact": capture.uia_compact_code,
         "pywinauto_compact": capture.pywinauto_compact_code,
+        "pywinauto_relative": capture.pwa_rel_code,
     }.get(mode, capture.uia_code)
     if not code.strip():
         return VerifyResult(

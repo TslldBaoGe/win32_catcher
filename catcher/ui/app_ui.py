@@ -754,6 +754,7 @@ class CatcherApp:
                 ("uiautomation_compact", "uia 精简"),
                 ("pywinauto", "pywinauto"),
                 ("pywinauto_compact", "pwa 精简"),
+                ("pywinauto_relative", "pwa 相对"),
                 ("custom", "自定义"),
             ],
             self._current_mode,
@@ -1718,6 +1719,7 @@ class CatcherApp:
             "pywinauto": capture.pywinauto_code,
             "uiautomation_compact": capture.uia_compact_code,
             "pywinauto_compact": capture.pywinauto_compact_code,
+            "pywinauto_relative": capture.pwa_rel_code,
         }.get(self._current_mode, capture.uia_code)
 
     def _update_code(self) -> None:
@@ -1735,7 +1737,12 @@ class CatcherApp:
             return
         code = self._code_for_mode()
         self.code_viewer.set_code(code or "")
-        variant = "精简" if self._current_mode.endswith("_compact") else "完整"
+        if self._current_mode.endswith("_compact"):
+            variant = "精简"
+        elif self._current_mode == "pywinauto_relative":
+            variant = "相对"
+        else:
+            variant = "完整"
         self.code_file_label.configure(text=f"locator.py · UTF-8 · {self._current_mode} · {variant}")
         self.mode_control.set_active(self._current_mode)
 

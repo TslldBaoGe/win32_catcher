@@ -110,6 +110,8 @@ class ElementCapture:
     rect: Tuple[int, int, int, int] = (0, 0, 0, 0)
     point: Tuple[int, int] = (0, 0)
     runtime_id: List[int] = field(default_factory=list)
+    rel_texts: List[str] = field(default_factory=list)
+    rel_index: int = 0
     is_enabled: bool = True
     is_offscreen: bool = False
     is_password: bool = False
@@ -125,6 +127,7 @@ class ElementCapture:
     pywinauto_code: str = ""
     uia_compact_code: str = ""
     pywinauto_compact_code: str = ""
+    pwa_rel_code: str = ""
 
     # ---------- 派生属性 ----------
     @property
@@ -187,5 +190,11 @@ class ElementCapture:
         data["point"] = tuple(int(v) for v in point)
         if not isinstance(data.get("runtime_id"), list):
             data["runtime_id"] = []
+        if not isinstance(data.get("rel_texts"), list):
+            data["rel_texts"] = []
+        try:
+            data["rel_index"] = int(data.get("rel_index") or 0)
+        except Exception:
+            data["rel_index"] = 0
         data["steps"] = steps
         return cls(**data)

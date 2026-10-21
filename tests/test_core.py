@@ -13,6 +13,7 @@ from catcher.codegen import (
     generate_uiautomation_compact,
     normalize_capture,
 )
+from catcher.rel_codegen import generate_pywinauto_relative
 from catcher.models import ElementCapture, SelectorStep
 from catcher.settings import AppSettings, load_settings, save_settings
 from catcher.storage import CaptureStore
@@ -148,6 +149,26 @@ class CompactCodeTests(unittest.TestCase):
         self.assertIn("child_window(", code)
         self.assertIn("auto_id='okButton'", code)
         self.assertNotIn("draw_outline", code)
+
+    def test_pwa_relative_anchor(self) -> None:
+        capture = make_two_step_capture()
+        capture.rel_texts = ["备注", "抄送", "发送"]
+        capture.rel_index = 1
+        code = generate_pywinauto_relative(capture)
+        compile(code, "pwa_rel.py", "exec")
+        self.assertIn("children()", code)
+        self.assertIn("texts.index('抄送')", code)
+        self.assertIn("- 1", code)
+        self.assertIn("container = win", code)
+
+    def test_pwa_relative_no_anchor_fallback(self) -> None:
+        capture = make_two_step_capture()
+        capture.rel_texts = []
+        capture.rel_index = 0
+        code = generate_pywinauto_relative(capture)
+        compile(code, "pwa_rel2.py", "exec")
+        self.assertIn("child_window(", code)
+        self.assertNotIn("texts.index", code)
 
     def test_compact_top_level_only(self) -> None:
         capture = make_capture()

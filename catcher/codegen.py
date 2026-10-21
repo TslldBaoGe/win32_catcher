@@ -394,6 +394,7 @@ def normalize_capture(capture: ElementCapture) -> ElementCapture:
         capture.pywinauto_code = generate_pywinauto(capture)
         capture.uia_compact_code = generate_uiautomation_compact(capture)
         capture.pywinauto_compact_code = generate_pywinauto_compact(capture)
+        capture.pwa_rel_code = generate_pywinauto_relative(capture)
     except Exception:
         pass
     return capture
@@ -462,3 +463,4 @@ from .compact_codegen import (  # noqa: E402,F401
     generate_pywinauto_compact,
     generate_uiautomation_compact,
 )
+from .rel_codegen import generate_pywinauto_relative  # noqa: E402,F401
