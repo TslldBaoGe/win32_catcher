@@ -12,3 +12,5 @@ build/
 dist/
 *.spec
 data/python_path.txt
+dist2/
+build_tmp/
