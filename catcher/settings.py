@@ -16,6 +16,8 @@ from .paths import SETTINGS_FILE
 class AppSettings:
     # 用于独立进程回放/验证的 Python 解释器；空串表示用当前解释器
     python_exe: str = ""
+    # 捕获策略: uia=坐标命中; tree=树状下降
+    capture_mode: str = "uia"
 
     def resolved_python(self) -> str:
         candidate = (self.python_exe or "").strip().strip('"')
@@ -41,6 +43,9 @@ def load_settings(path: Optional[Path] = None) -> AppSettings:
     exe = raw.get("python_exe")
     if isinstance(exe, str):
         settings.python_exe = exe.strip().strip('"')
+    cm = raw.get("capture_mode")
+    if isinstance(cm, str) and cm in ("uia", "tree"):
+        settings.capture_mode = cm
     return settings
 
 

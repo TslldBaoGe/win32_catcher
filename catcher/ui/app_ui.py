@@ -126,6 +126,7 @@ class CatcherApp:
         self._verify_result: Optional[VerifyResult] = None
         self._action_running = False
         self._action_kind = ""
+        self.capture_mode = self.settings.capture_mode or "uia"
         self._custom_running = False
         self._custom_save_job = None
         self._custom_run_count = 0
@@ -273,6 +274,15 @@ class CatcherApp:
         self.capture_btn.pack(side="right")
 
         self.uia_pill = Pill(right, t, "UIA 就绪", fg=t.green, bg=t.green_soft, height=t.px(24))
+        self.cap_mode_control = SegmentedControl(
+            right,
+            t,
+            [("uia", "坐标"), ("tree", "树状")],
+            self.capture_mode,
+            self._set_capture_mode,
+        )
+        self.cap_mode_control.pack(side="right", padx=(0, t.px(8)))
+        Tooltip(self.cap_mode_control, t, "捕获模式: 坐标=ElementFromPoint(默认); 树状=沿控件树下降(E-mobile 等坐标命中失效时用)")
         self.uia_pill.pack(side="right", padx=(0, t.px(8)))
         admin = is_admin()
         self.admin_pill = Pill(
@@ -1061,6 +1071,7 @@ class CatcherApp:
             pass
 
     def _on_custom_run_done(self, output: str, returncode: int, duration: float) -> None:
+        self.capture_mode = self.settings.capture_mode or "uia"
         self._custom_running = False
         self.custom_run_btn.set_enabled(True)
         self.custom_run_btn.set_text("▶  运行  F5")
@@ -1075,6 +1086,7 @@ class CatcherApp:
             self._set_status(f"自定义代码运行失败 · 退出码 {returncode}", "error")
 
     def _on_custom_run_error(self, message: str, duration: float = 0.0) -> None:
+        self.capture_mode = self.settings.capture_mode or "uia"
         self._custom_running = False
         self.custom_run_btn.set_enabled(True)
         self.custom_run_btn.set_text("▶  运行  F5")
@@ -1227,7 +1239,7 @@ class CatcherApp:
         self.overlay.hide()
         self._set_status("正在读取元素并生成代码…", "info")
         self._capture_timeout_job = self.root.after(12000, self._capture_timeout)
-        self._picker.capture(x, y)
+        self._picker.capture(x, y, self.capture_mode)
         self.logger.info("请求捕获 (%d, %d)", x, y)
 
     def _capture_timeout(self) -> None:
@@ -2088,6 +2100,7 @@ class CatcherApp:
             self._action_hid_window = False
         self._action_running = False
         self._action_kind = ""
+        self.capture_mode = self.settings.capture_mode or "uia"
         self._custom_running = False
         self._custom_save_job = None
         self._custom_run_count = 0
@@ -2207,6 +2220,15 @@ class CatcherApp:
 
     def _open_data_dir(self) -> None:
         open_folder(DATA_DIR)
+
+    def _set_capture_mode(self, mode: str) -> None:
+        if mode not in ("uia", "tree") or mode == self.capture_mode:
+            return
+        self.capture_mode = mode
+        self.settings.capture_mode = mode
+        if save_settings(self.settings):
+            self._toast(f"捕获模式已切换: " + ("树状下降" if mode == "tree" else "坐标命中"), "success")
+            self.logger.info("捕获模式切换: %s", mode)
 
     def _open_settings(self) -> None:
         if self._closing:

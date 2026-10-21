@@ -31,9 +31,9 @@ class PickerWorker(threading.Thread):
                 self._hover = (int(x), int(y), int(seq))
                 self._cond.notify()
 
-    def capture(self, x: int, y: int) -> None:
+    def capture(self, x: int, y: int, mode: str = "uia") -> None:
         with self._cond:
-            self._capture = (int(x), int(y))
+            self._capture = (int(x), int(y), mode)
             self._hover = None
             self._cond.notify()
 
@@ -91,9 +91,9 @@ class PickerWorker(threading.Thread):
                         continue
 
                     if capture_req is not None:
-                        x, y = capture_req
+                        x, y, cap_mode = capture_req
                         try:
-                            capture = capture_from_point(x, y, self.thumb_dir)
+                            capture = capture_from_point(x, y, self.thumb_dir, mode=cap_mode)
                             self.events.put(("captured", capture))
                         except CaptureError as exc:
                             self.events.put(("capture_error", exc))

@@ -538,18 +538,135 @@ def hover_from_point(x: int, y: int) -> Optional[HoverInfo]:
     )
 
 
-def capture_from_point(x: int, y: int, thumb_dir: Path) -> ElementCapture:
+_LEAF_STOP_TYPES = {
+    "ButtonControl", "MenuItemControl", "ListItemControl", "TabItemControl",
+    "TreeItemControl", "CheckBoxControl", "RadioButtonControl", "HyperlinkControl",
+    "ComboBoxControl", "SliderControl", "SpinnerControl", "SplitButtonControl",
+    "EditControl", "DocumentControl", "DataItemControl", "ImageControl",
+}
+
+
+def _tree_descend(top: Any, x: int, y: int, max_depth: int = 30) -> Optional[Any]:
+    """从顶层窗口沿控件树向下，找包含该坐标的最小控件。"""
+    cur = top
+    seen = set()
+    for _ in range(max_depth):
+        cur_rid = _rid(cur)
+        if cur_rid in seen:
+            break
+        seen.add(cur_rid)
+        # 交互叶子类型即停：不深入按钮/菜单项/输入框等内部装饰
+        cur_type = str(_safe(lambda: cur.ControlTypeName, "") or "")
+        if cur_type in _LEAF_STOP_TYPES:
+            break
+        best = None
+        best_area = 10 ** 18
+        try:
+            children = cur.GetChildren()
+        except Exception:
+            children = []
+        for child in children:
+            l, t, r, b = _rect_tuple(child)
+            if r - l <= 0 or b - t <= 0:
+                continue
+            if l <= x < r and t <= y < b:
+                area = (r - l) * (b - t)
+                if area < best_area:
+                    best, best_area = child, area
+        if best is None:
+            break
+        cur = best
+    return cur
+
+
+_INTERACTIVE_PARENTS = {
+    "ButtonControl", "MenuItemControl", "SplitButtonControl", "ListItemControl",
+    "TabItemControl", "TreeItemControl", "HyperlinkControl", "CheckBoxControl",
+    "RadioButtonControl", "ComboBoxControl",
+}
+_DECORATION_TYPES = {"TextControl", "ImageControl"}
+
+
+def _resolve_decorated(cur: Any, top: Any, top_rid: tuple) -> Any:
+    """图标/字形等装饰控件贴在交互控件上时，归并到交互控件。"""
+    try:
+        for _ in range(6):
+            if _rid(cur) == top_rid:
+                break
+            type_name = str(_safe(lambda: cur.ControlTypeName, "") or "")
+            if type_name not in _DECORATION_TYPES:
+                break
+            parent = cur.GetParentControl()
+            if parent is None or _rid(parent) == top_rid:
+                break
+            parent_type = str(_safe(lambda: parent.ControlTypeName, "") or "")
+            if parent_type in _INTERACTIVE_PARENTS or parent_type in _DECORATION_TYPES:
+                cur = parent
+                continue
+            break
+    except Exception:
+        pass
+    return cur
+
+
+def _top_level_from_point(x: int, y: int) -> Optional[Any]:
+    """遍历顶层窗口，找包含该坐标的可见窗口。"""
+    try:
+        root = auto.GetRootControl()
+        for win in root.GetChildren():
+            l, t, r, b = _rect_tuple(win)
+            if r - l <= 0 or b - t <= 0:
+                continue
+            if l <= x < r and t <= y < b:
+                return win
+    except Exception:
+        pass
+    return None
+
+
+def capture_from_point(x: int, y: int, thumb_dir: Path, mode: str = "uia") -> ElementCapture:
     auto.SetGlobalSearchTimeout(5.0)
+    ctrl = None
     try:
         ctrl = auto.ControlFromPoint(int(x), int(y))
     except Exception as exc:
-        raise _friendly_error(exc) from exc
+        if mode != "tree":
+            raise _friendly_error(exc) from exc
     if ctrl is None:
-        raise CaptureError("光标下没有可访问的 UI Automation 元素。", "请将鼠标悬停在目标程序的按钮、输入框或菜单上。")
-    return capture_from_control(ctrl, int(x), int(y), thumb_dir)
+        top = _top_level_from_point(int(x), int(y))
+        if top is None:
+            raise CaptureError("光标下没有可访问的 UI Automation 元素。", "请将鼠标悬停在目标程序的按钮、输入框或菜单上。")
+        ctrl = _tree_descend(top, int(x), int(y))
+        if ctrl is None:
+            raise CaptureError("光标下没有可访问的 UI Automation 元素。", "请将鼠标悬停在目标程序的按钮、输入框或菜单上。")
+    elif mode == "tree":
+        top = None
+        try:
+            top = ctrl.GetTopLevelControl()
+        except Exception:
+            top = None
+        if top is None:
+            top = _top_level_from_point(int(x), int(y))
+        if top is not None:
+            deeper = _tree_descend(top, int(x), int(y))
+            if deeper is not None:
+                ctrl = _resolve_decorated(deeper, top, _rid(top))
+    else:
+        # 坐标模式自动兜底：命中顶层包装元素时，改用树状下降
+        try:
+            top = ctrl.GetTopLevelControl()
+            if top is not None and _rid(ctrl) == _rid(top):
+                deeper = _tree_descend(top, int(x), int(y))
+                if deeper is not None:
+                    deeper = _resolve_decorated(deeper, top, _rid(top))
+                    if _rid(deeper) != _rid(ctrl):
+                        ctrl = deeper
+        except Exception:
+            pass
+    return capture_from_control(ctrl, int(x), int(y), thumb_dir, mode=mode)
 
 
-def capture_from_control(ctrl: Any, x: int, y: int, thumb_dir: Path) -> ElementCapture:
+def capture_from_control(ctrl: Any, x: int, y: int, thumb_dir: Path, mode: str = "uia") -> ElementCapture:
     """从已有 UIA 控件构建捕获快照；便于测试和二次开发。"""
     auto.SetGlobalSearchTimeout(5.0)
     pid = _safe_int(lambda: ctrl.ProcessId, 0)
@@ -621,6 +738,7 @@ def capture_from_control(ctrl: Any, x: int, y: int, thumb_dir: Path) -> ElementC
         steps=steps,
         rel_texts=rel_texts,
         rel_index=rel_index,
+        capture_mode=("pwa树状" if mode == "tree" else "uia坐标"),
     )
 
     # 等覆盖层隐藏后再截图，避免把高亮边框截进缩略图。

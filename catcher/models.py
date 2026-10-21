@@ -128,6 +128,7 @@ class ElementCapture:
     uia_compact_code: str = ""
     pywinauto_compact_code: str = ""
     pwa_rel_code: str = ""
+    capture_mode: str = "uia"
 
     # ---------- 派生属性 ----------
     @property
